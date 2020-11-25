@@ -62,7 +62,7 @@
                   <span class="name" th:text="${account.displayName}"></span><br>
                   <span class="capital">
                     Account Number: <span th:text="${account.accountNumber}"></span><br/>
-                    <span th:if="${account.owner}">(this is a joint account and cannot be selected)</span>
+                    <span th:unless="${account.owner}">(this is a joint account and cannot be selected)</span>
                   </span>
                 </div>
                 <div class="switch-toggle-wrapper ml-auto mr-5" >
