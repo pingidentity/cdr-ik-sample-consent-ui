@@ -42,7 +42,9 @@ import com.pingidentity.ps.cdr.consentapp.utils.PFOAuthMgtHelper;
 public class ConsentApplicationController
 {
     
-    private final static Log LOGGER = LogFactory.getLog(MASSLClient.class);
+    private static final String CLAIMS_REDIRECTURL = "com.pingidentity.adapter.input.parameter.current.server.base.url";
+
+	private final static Log LOGGER = LogFactory.getLog(MASSLClient.class);
     
     private static final int YEAR_IN_SECONDS = 31_536_000;
     private static final String DATE_FORMAT = "dd MMMM yyyy";
@@ -61,6 +63,8 @@ public class ConsentApplicationController
     private static final String SESSION_USERID = "USER_ID";
     private static final String PARAMS_ACCOUNTS = "accounts";
     private static final String PARAMS_DECISION = "approved";
+
+	private static final String SESSION_REDIRECTBASEURL = "REDIRECT_BASEURL";
     
     private final SimpleDateFormat DATE_FORMATTER = new SimpleDateFormat(DATE_FORMAT);
 
@@ -173,6 +177,9 @@ public class ConsentApplicationController
         
         validatePickup(pickupResponseJSON);
         
+        final String redirectHost = (String) pickupResponseJSON.get(CLAIMS_REDIRECTURL);
+        request.getSession().setAttribute(SESSION_REDIRECTBASEURL, redirectHost);
+        
         final String userId = (String) pickupResponseJSON.get(CLAIM_USERNAME);
         request.getSession().setAttribute(SESSION_USERID, userId);
         
@@ -217,6 +224,7 @@ public class ConsentApplicationController
     @SuppressWarnings("unchecked")
     private String denyRequest(final HttpServletRequest request, final String resumePath) throws AbstractConsentApplicationException
     {
+        final String redirectBaseUrl = (String) request.getSession().getAttribute(SESSION_REDIRECTBASEURL);
         final JSONObject dropoffPayload = new JSONObject();
         
         dropoffPayload.put("decision", "deny");
@@ -225,13 +233,13 @@ public class ConsentApplicationController
         
         request.getSession().invalidate();
         
-        return "redirect:" + pingfederateBaseUrl + resumePath + "?REF=" + refId;
+        return "redirect:" + redirectBaseUrl + resumePath + "?REF=" + refId;
     }
     
     @SuppressWarnings("unchecked")
     private String approveRequest(final HttpServletRequest request, final String resumePath) throws AbstractConsentApplicationException
     {
-        
+        final String redirectBaseUrl = (String) request.getSession().getAttribute(SESSION_REDIRECTBASEURL);
         final JSONObject pickupObject = (JSONObject) request.getSession().getAttribute(SESSION_LAST_PICKUP_RESULT);
         final String requestedScopeStr = (String) pickupObject.get(CLAIM_SCOPE);
         final String[] requestedScopes = requestedScopeStr.split(" ");
@@ -284,7 +292,7 @@ public class ConsentApplicationController
         
         request.getSession().invalidate();
         
-        return "redirect:" + pingfederateBaseUrl + resumePath + "?REF=" + refId;
+        return "redirect:" + redirectBaseUrl + resumePath + "?REF=" + refId;
     }
     
     private void validateSelectedAccounts(final HttpServletRequest request) throws SecurityException
