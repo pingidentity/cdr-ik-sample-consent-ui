@@ -53,7 +53,6 @@ public class ConsentApplicationController
     private static final String CLAIM_USERNAME = "chainedattr.username";
     private static final String CLAIM_CLIENTID = "com.pingidentity.adapter.input.parameter.oauth.client.id";
     private static final Object CLAIMS_SIGNEDCLAIMS = "signedreqattr.claims";
-    private static final String CLAIM_CDRARRANGEMENTID = "signedreqattr.cdr_arrangement_id";
     
     private static final String SESSION_ATTR_RESUME_PATH = "RESUME_PATH";
     private static final String SESSION_LAST_PICKUP_RESULT = "LAST_PICKUP_RESULT";
@@ -176,6 +175,7 @@ public class ConsentApplicationController
         final JSONObject pickupResponseJSON = pfAgentlessHelper.pickupRef(incomingRefParameter);
         
         validatePickup(pickupResponseJSON);
+        validateCDRArrangement(pickupResponseJSON);
         
         final String redirectHost = (String) pickupResponseJSON.get(CLAIMS_REDIRECTURL);
         request.getSession().setAttribute(SESSION_REDIRECTBASEURL, redirectHost);
@@ -357,6 +357,45 @@ public class ConsentApplicationController
         return null;
     }
     
+    private void validateCDRArrangement(final JSONObject pickupObject) throws BadInitialisationException
+    {
+        
+        if (!pickupObject.containsKey(CLAIMS_SIGNEDCLAIMS))
+        {
+            return;
+        }
+        
+        final JSONObject signedAttrClaims = (JSONObject) pickupObject.get(CLAIMS_SIGNEDCLAIMS);
+        
+        if (!signedAttrClaims.containsKey("cdr_arrangement_id"))
+        {
+            return;
+        }
+        
+        final String cdrArrangementId = (String) signedAttrClaims.get("cdr_arrangement_id");
+        final String expectedClientId = (String) pickupObject.get(CLAIM_CLIENTID);
+        final String expectedUserId = (String) pickupObject.get(CLAIM_USERNAME);
+        JSONObject grantDetails;
+        
+        try
+        {
+            grantDetails = this.pfOAuthClientMgtHelper.getGrantDetails(expectedUserId, cdrArrangementId);
+        } catch (PFOAuthException e)
+        {
+            throw new BadInitialisationException("Unable to receive grant record from cdr arrangement id", e);
+        }
+        
+        if (grantDetails == null)
+        {
+            throw new BadInitialisationException("Specified CDR Arrangement ID returned no results");
+        }
+        
+        if (!grantDetails.containsKey("clientId") || !grantDetails.get("clientId").equals(expectedClientId))
+        {
+            throw new BadInitialisationException("Specified CDR Arrangement ID does not align with current client ID");
+        }
+    }
+    
     private void validatePickup(final JSONObject pickupResponseJSON) throws BadInitialisationException
     {
         
@@ -378,32 +417,6 @@ public class ConsentApplicationController
         if (!pickupResponseJSON.containsKey(CLAIM_CLIENTID))
         {
             throw new BadInitialisationException("Unable to determine client_id from " + CLAIM_CLIENTID);
-        }
-        
-        if (pickupResponseJSON.containsKey(CLAIM_CDRARRANGEMENTID))
-        {
-            final String cdrArrangementId = (String) pickupResponseJSON.get(CLAIM_CDRARRANGEMENTID);
-            final String expectedClientId = (String) pickupResponseJSON.get(CLAIM_CLIENTID);
-            final String expectedUserId = (String) pickupResponseJSON.get(CLAIM_USERNAME);
-            JSONObject grantDetails;
-            
-            try
-            {
-                grantDetails = this.pfOAuthClientMgtHelper.getGrantDetails(expectedUserId, cdrArrangementId);
-            } catch (PFOAuthException e)
-            {
-                throw new BadInitialisationException("Unable to receive grant record from cdr arrangement id", e);
-            }
-            
-            if (grantDetails == null)
-            {
-                throw new BadInitialisationException("Specified CDR Arrangement ID returned no results");
-            }
-            
-            if (!grantDetails.containsKey("clientId") || !grantDetails.get("clientId").equals(expectedClientId))
-            {
-                throw new BadInitialisationException("Specified CDR Arrangement ID does not align with current client ID");
-            }
         }
         
     }
