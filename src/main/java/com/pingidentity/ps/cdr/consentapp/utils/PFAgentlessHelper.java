@@ -19,7 +19,7 @@ import org.json.simple.parser.ParseException;
 public class PFAgentlessHelper
 {
     
-    private static final int DEFAULT_REQUEST_TIMEOUT = 30_000;
+    private static final int DEFAULT_REQUEST_TIMEOUT = 30000;
     private static final String DEFAULT_KEYSTORE_TYPE = "JKS";
     private static final String ENDPOINT_PICKUP = "/ext/ref/pickup?REF=";
     private static final String ENDPOINT_DROPOFF = "/ext/ref/dropoff";

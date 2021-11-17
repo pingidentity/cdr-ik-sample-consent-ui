@@ -12,7 +12,7 @@ RUN mvn package
 
 #pull base image
 
-FROM adoptopenjdk/openjdk11:jdk-11.0.2.9-alpine-slim
+FROM eclipse-temurin:11-jre-alpine
 
 COPY hooks /tmp/hooks/
 COPY wait-for /tmp/
